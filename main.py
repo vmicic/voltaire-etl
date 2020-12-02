@@ -82,18 +82,18 @@ def preprocess_input_row(menu_item_row):
     return new_row_content, True
 
 
-def send_create_menu_item_request(menu_item):
-    create_menu_item_url = "https://voltaire-api-gateway-cvy8ozaz.ew.gateway.dev/menu-items"
-    headers = {'Content-type': 'application/json'}
-    return requests.post(url=create_menu_item_url, data=json.dumps(menu_item), headers=headers)
-
-
 def is_decimal(s):
     try:
         Decimal(s)
         return True
     except InvalidOperation:
         return False
+
+
+def send_create_menu_item_request(menu_item):
+    create_menu_item_url = "https://voltaire-api-gateway-cvy8ozaz.ew.gateway.dev/menu-items"
+    headers = {'Content-type': 'application/json'}
+    return requests.post(url=create_menu_item_url, data=json.dumps(menu_item), headers=headers)
 
 
 def rewrite_remaining_text(menu_items_remaining):
