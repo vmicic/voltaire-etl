@@ -3,9 +3,12 @@ import csv
 import requests
 import json
 from dropbox.files import WriteMode
-from decimal import *
+from dotenv import load_dotenv
+import os
+from dropbox.exceptions import ApiError, HttpError
 
-dropbox_access_token = "BQ_OJp7O7QAAAAAAAAAAAQs2ID_x5zT6ED0-aQp1QC9lpZwZSbc7C7UVRy03IBW_"
+load_dotenv()
+dropbox_access_token = os.getenv("DROPBOX_ACCESS_TOKEN")
 dbx = dropbox.Dropbox(dropbox_access_token)
 
 
@@ -13,7 +16,7 @@ def update_menu_items(request):
     list_folder_result = dbx.files_list_folder(path="/restaurants")
     for entry in list_folder_result.entries:
         restaurant_filename = entry.name
-        metadata, res = dbx.files_download(path="/restaurants/" + restaurant_filename)
+        metadata, res = dbx.files_download(path=f"/restaurants/{restaurant_filename}")
         content_decoded = res.content.decode('ascii')
         parsed_csv = csv.reader(content_decoded.splitlines(), delimiter=',')
         menu_items = list(parsed_csv)
@@ -49,17 +52,26 @@ def update_requests(restaurant_name, menu_items):
 
         new_content += "\n"
 
-    with open("/tmp/" + restaurant_name + ".csv", "w") as f:
+    file_path = f"/tmp/{restaurant_name}.csv"
+
+    with open(file_path, "w") as f:
         f.write(new_content)
-        f.close()
-    with open("/tmp/" + restaurant_name + ".csv", 'rb') as f:
-        dbx.files_upload(f.read(), "/restaurants/" + restaurant_name + ".csv", mode=WriteMode.overwrite)
+    with open(file_path, 'rb') as f:
+        try:
+            dbx.files_upload(f.read(), f"/restaurants/misko.csv", mode=WriteMode.overwrite)
+        except HttpError as ex:
+            if ex.status_code == 413:
+                print("File is too large")
+        except ApiError:
+            print("Error uploading file.")
+    os.remove(file_path)
 
 
 def preprocess_input_row(menu_item_row):
     new_row_content = ""
     if len(menu_item_row) < 3:
-        return
+        new_row_content += ", , , invalid row length"
+        return new_row_content, False
 
     menu_item_name = menu_item_row[0]
     menu_item_description = menu_item_row[1]
@@ -75,19 +87,11 @@ def preprocess_input_row(menu_item_row):
         new_row_content += ", You must specify menu item price"
         return new_row_content, False
 
-    if not is_decimal(menu_item_price):
+    if not menu_item_price.isdecimal():
         new_row_content += ", Price must be a decimal number"
         return new_row_content, False
 
     return new_row_content, True
-
-
-def is_decimal(s):
-    try:
-        Decimal(s)
-        return True
-    except InvalidOperation:
-        return False
 
 
 def send_create_menu_item_request(menu_item):
@@ -106,7 +110,3 @@ def rewrite_remaining_text(menu_items_remaining):
         content += menu_item_name + ",\"" + menu_item_description + "\"," + menu_item_price + "\n"
 
     return content
-
-
-update_menu_items(None)
-
