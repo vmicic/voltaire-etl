@@ -6,6 +6,13 @@ from dropbox.files import WriteMode
 from dotenv import load_dotenv
 import os
 from dropbox.exceptions import ApiError, HttpError
+import sentry_sdk
+
+
+sentry_sdk.init(
+    "https://9cece7c10b31476fb0ea7fe3e7287142@o495639.ingest.sentry.io/5568685",
+    traces_sample_rate=1.0
+)
 
 load_dotenv()
 dropbox_access_token = os.getenv("DROPBOX_ACCESS_TOKEN")
